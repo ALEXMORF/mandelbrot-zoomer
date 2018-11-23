@@ -1,8 +1,8 @@
 /*
 TODO(chen):
 
-2. understand fractal zoomer formulas
-3. anti-alias it
+1. grill fractal zoomer formulas
+2. port to linux
 
 */
 #include "zoomer.h"
