@@ -19,7 +19,7 @@ struct zoomer
     v2d StartP;
     v2d P;
     f64 Scale;
-    i32 IterCount;
+    f32 IterCount;
     
     //render
     GLuint QuadVAO;

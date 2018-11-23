@@ -81,6 +81,7 @@ WinMain(HINSTANCE CurrentInstance,
     LoadGLFunctions(Win32GetOpenglFunction);
     
     zoomer Zoomer = {};
+    u64 LastTimeCounter = Win32GetPerformanceCounter();
     
     gAppIsRunning = true;
     while (gAppIsRunning)
@@ -142,12 +143,16 @@ WinMain(HINSTANCE CurrentInstance,
             }
         }
         
-        RunFractalZoomer(&Zoomer, gPrevInput, gInput, gWindowWidth, gWindowHeight);
+        f32 dT = Win32GetTimeElapsedInMS(LastTimeCounter, Win32GetPerformanceCounter());
+        f32 dTInSeconds = 0.001f * dT;
+        RunFractalZoomer(&Zoomer, gPrevInput, gInput, dTInSeconds,
+                         gWindowWidth, gWindowHeight);
+        LastTimeCounter = Win32GetPerformanceCounter();
         
         char WindowTitleBuffer[1024];
         snprintf(WindowTitleBuffer, sizeof(WindowTitleBuffer), 
                  "Fractal-Zoom: Scale Level: 2^-%.2f, # of Iteration: %d\n", 
-                 (f32)Zoomer.Scale, Zoomer.IterCount);
+                 (f32)Zoomer.Scale, (i32)Zoomer.IterCount);
         SetWindowTextA(Window, WindowTitleBuffer);
         
         SwapBuffers(WindowDC);

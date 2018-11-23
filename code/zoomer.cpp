@@ -50,7 +50,7 @@ int color_count = colors.length();
 int real_count = color_count - 1;
 for (int i = 1; i <= real_count; ++i)
 {
-if (t < float(i) / float(real_count))
+if (t <= float(i) / float(real_count))
 {
 return mix(colors[i-1], colors[i], float(real_count) * (t - float(i-1) / float(real_count)));
 }
@@ -106,7 +106,7 @@ NormalizeMouseP(v2 MouseP, f32 AspectRatio)
 }
 
 internal void
-RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input, 
+RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input, f32 dT,
                  int WindowWidth, int WindowHeight)
 {
     if (!Zoomer->IsInitialized)
@@ -164,21 +164,21 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input,
     {
         if (Input.ShiftIsDown)
         {
-            Zoomer->Scale -= 0.01f;
+            Zoomer->Scale -= 3.0f * dT;
         }
         else
         {
-            Zoomer->Scale += 0.01f;
+            Zoomer->Scale += 3.0f * dT;
         }
     }
     
     if (Input.UpArrowIsDown)
     {
-        Zoomer->IterCount = Min(1000, Zoomer->IterCount + 1);
+        Zoomer->IterCount = Min(1000.0f, Zoomer->IterCount + 200.0f * dT);
     }
     if (Input.DownArrowIsDown)
     {
-        Zoomer->IterCount = Max(10, Zoomer->IterCount - 1);
+        Zoomer->IterCount = Max(10.0f, Zoomer->IterCount - 200.0f * dT);
     }
     
     
@@ -207,7 +207,7 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input,
     glUniform1d(glGetUniformLocation(Zoomer->Shader, "ZoomScale"),
                 Zoomer->Scale);
     glUniform1i(glGetUniformLocation(Zoomer->Shader, "IterCount"),
-                Zoomer->IterCount);
+                (i32)Zoomer->IterCount);
     
     if (!Zoomer->IsMoving)
     {
