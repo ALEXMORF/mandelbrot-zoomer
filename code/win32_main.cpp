@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <windowsx.h>
+#include <stdio.h>
 #include "ch_gl.h"
 
 #include "kernel.h"
@@ -142,6 +143,12 @@ WinMain(HINSTANCE CurrentInstance,
         }
         
         RunFractalZoomer(&Zoomer, gPrevInput, gInput, gWindowWidth, gWindowHeight);
+        
+        char WindowTitleBuffer[1024];
+        snprintf(WindowTitleBuffer, sizeof(WindowTitleBuffer), 
+                 "Fractal-Zoom: Scale Level: 2^-%.2f, # of Iteration: %d\n", 
+                 (f32)Zoomer.Scale, Zoomer.IterCount);
+        SetWindowTextA(Window, WindowTitleBuffer);
         
         SwapBuffers(WindowDC);
         Sleep(5);

@@ -33,24 +33,29 @@ return dvec2(p.x*p.x - p.y*p.y, 2.0*p.x*p.y);
 
 vec3 palette(float t)
 {
-    vec3 a = vec3(0.1, 0.4, 0.7);
-    vec3 b = vec3(1, 0.7, 0);
-    vec3 c = vec3(1, 0, 1);
-    vec3 d = vec3(0, 0, 0.4);
-    
-    if (t < 0.333)
-    {
-        return mix(a, b, 3.0*t);
-    }
-    else if (t < 0.666)
-    {	
-        return mix(b, c, 3.0*(t - 0.3333));
-    }
-    else
-    {
-        return mix(c, d, 3.0*(t - 0.6666));
-    }
-    
+vec3[] colors = vec3[](
+
+vec3(0.1,0.4, 0.7),
+vec3(1, 0.7, 0),
+vec3(1, 0, 1),
+
+vec3(0.1,0.4, 0.7),
+vec3(1, 0.7, 0),
+vec3(1, 0, 1),
+
+vec3(0, 0, 0.4)
+);
+
+int color_count = colors.length();
+int real_count = color_count - 1;
+for (int i = 1; i <= real_count; ++i)
+{
+if (t < float(i) / float(real_count))
+{
+return mix(colors[i-1], colors[i], float(real_count) * (t - float(i-1) / float(real_count)));
+}
+}
+
 }
 
 void main()
