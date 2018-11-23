@@ -21,11 +21,12 @@ char *FShaderSource = R"(
 
 uniform dvec2 ZoomP;
 uniform double ZoomScale;  
+uniform int IterCount;
 
 in vec2 FragP;
 out vec3 FragColor;
 
-dvec2 complex_sq(in dvec2 p)
+dvec2 ComplexSq(in dvec2 p)
 {
 return dvec2(p.x*p.x - p.y*p.y, 2.0*p.x*p.y);
 }
@@ -57,15 +58,14 @@ void main()
 dvec2 Z = dvec2(0.0);
 dvec2 C = dvec2(FragP) / pow(2.0, float(ZoomScale)) - ZoomP;
 
-int iter_count = 200;
-int iter;
-for (iter = 0; iter < iter_count; ++iter)
+int Iter;
+for (Iter = 0; Iter < IterCount; ++Iter)
 {
-Z = complex_sq(Z) + C;
+Z = ComplexSq(Z) + C;
 if (dot(Z, Z) > 4.0) break;
 }
 
- float t = float(iter) / float(iter_count);
+ float t = float(Iter) / float(IterCount);
  
 FragColor = palette(t);
 }
@@ -148,6 +148,7 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input,
         
         Zoomer->P = {0.5, 0.0};
         Zoomer->Scale = 1.0;
+        Zoomer->IterCount = 200;
         
         Zoomer->IsInitialized = true;
     }
@@ -165,6 +166,16 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input,
             Zoomer->Scale += 0.01f;
         }
     }
+    
+    if (Input.UpArrowIsDown)
+    {
+        Zoomer->IterCount = Min(1000, Zoomer->IterCount + 1);
+    }
+    if (Input.DownArrowIsDown)
+    {
+        Zoomer->IterCount = Max(10, Zoomer->IterCount - 1);
+    }
+    
     
     if (!PrevInput.MouseIsDown && Input.MouseIsDown)
     {
@@ -190,6 +201,8 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input,
                 AspectRatio);
     glUniform1d(glGetUniformLocation(Zoomer->Shader, "ZoomScale"),
                 Zoomer->Scale);
+    glUniform1i(glGetUniformLocation(Zoomer->Shader, "IterCount"),
+                Zoomer->IterCount);
     
     if (!Zoomer->IsMoving)
     {

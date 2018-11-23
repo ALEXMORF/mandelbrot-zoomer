@@ -113,10 +113,22 @@ WinMain(HINSTANCE CurrentInstance,
                             gInput.ShiftIsDown = KeyIsDown;
                         }
                         
+                        if (KeyCode == VK_UP)
+                        {
+                            gInput.UpArrowIsDown = KeyIsDown;
+                        }
+                        
+                        if (KeyCode == VK_DOWN)
+                        {
+                            gInput.DownArrowIsDown = KeyIsDown;
+                        }
+                        
                         if (KeyCode == VK_SPACE)
                         {
                             gInput.SpaceIsDown = KeyIsDown;
                         }
+                        
+                        
                     }
                     
                 } break;

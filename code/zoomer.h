@@ -5,6 +5,8 @@ struct input
 {
     b32 ShiftIsDown;
     b32 SpaceIsDown;
+    b32 UpArrowIsDown;
+    b32 DownArrowIsDown;
     
     b32 MouseIsDown;
     v2 MouseP;
@@ -17,6 +19,7 @@ struct zoomer
     v2d StartP;
     v2d P;
     f64 Scale;
+    i32 IterCount;
     
     //render
     GLuint QuadVAO;

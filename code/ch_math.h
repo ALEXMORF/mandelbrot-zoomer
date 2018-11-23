@@ -114,6 +114,18 @@ Max(f32 A, f32 B)
     return A > B? A: B;
 }
 
+inline i32
+Min(i32 A, i32 B)
+{
+    return A < B? A: B;
+}
+
+inline i32
+Max(i32 A, i32 B)
+{
+    return A > B? A: B;
+}
+
 inline v3
 Min(v3 A, v3 B)
 {
