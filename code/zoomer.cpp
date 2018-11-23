@@ -1,9 +1,8 @@
 /*
 TODO(chen):
 
-1. grill fractal zoomer formulas
-2. port to linux
-
+ 1. port to linux
+ 
 */
 #include "zoomer.h"
 
