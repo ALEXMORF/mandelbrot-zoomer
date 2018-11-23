@@ -1,3 +1,10 @@
+/*
+TODO(chen):
+
+2. understand fractal zoomer formulas
+3. anti-alias it
+
+*/
 #include "zoomer.h"
 
 char *VShaderSource = R"(
@@ -60,7 +67,7 @@ return mix(colors[i-1], colors[i], float(real_count) * (t - float(i-1) / float(r
 
 void main()
 {
-dvec2 Z = dvec2(0.0);
+dvec2 Z = dvec2(0);
 dvec2 C = dvec2(FragP) / pow(2.0, float(ZoomScale)) - ZoomP;
 
 int Iter;
