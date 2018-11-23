@@ -3,12 +3,14 @@
 char *VShaderSource = R"(
 #version 400
 
+uniform float AspectRatio;
+
 in layout(location = 0) vec3 P;
-out vec3 FragP;
+out vec2 FragP;
 
 void main()
 {
-FragP = P;
+FragP = vec2(P.x * AspectRatio, P.y);
 gl_Position = vec4(P, 1.0);
 }
 
@@ -17,12 +19,55 @@ gl_Position = vec4(P, 1.0);
 char *FShaderSource = R"(
 #version 400
 
-in vec3 FragP;
+uniform dvec2 ZoomP;
+uniform double ZoomScale;  
+
+in vec2 FragP;
 out vec3 FragColor;
+
+dvec2 complex_sq(in dvec2 p)
+{
+return dvec2(p.x*p.x - p.y*p.y, 2.0*p.x*p.y);
+}
+
+vec3 palette(float t)
+{
+    vec3 a = vec3(0.1, 0.4, 0.7);
+    vec3 b = vec3(1, 0.7, 0);
+    vec3 c = vec3(1, 0, 1);
+    vec3 d = vec3(0, 0, 0.4);
+    
+    if (t < 0.333)
+    {
+        return mix(a, b, 3.0*t);
+    }
+    else if (t < 0.666)
+    {	
+        return mix(b, c, 3.0*(t - 0.3333));
+    }
+    else
+    {
+        return mix(c, d, 3.0*(t - 0.6666));
+    }
+    
+}
 
 void main()
 {
-FragColor = FragP;
+dvec2 Z = dvec2(0.0);
+dvec2 C = dvec2(FragP) / pow(2.0, float(ZoomScale)) - ZoomP;
+
+int iter_count = 200;
+int iter;
+for (iter = 0; iter < iter_count; ++iter)
+{
+Z = complex_sq(Z) + C;
+if (dot(Z, Z) > 4.0) break;
+}
+
+ float t = float(iter) / float(iter_count);
+ 
+FragColor = palette(t);
 }
 
 )";
@@ -46,8 +91,18 @@ CompileShader(GLenum Type, char *Source)
     return Shader;
 }
 
+inline v2d
+NormalizeMouseP(v2 MouseP, f32 AspectRatio)
+{
+    v2d Result = {};
+    Result.X = AspectRatio * (2.0 * (f64)MouseP.X - 1.0);
+    Result.Y = 2.0 * (1.0 - (f64)MouseP.Y) - 1.0;
+    return Result;
+}
+
 internal void
-RunFractalZoomer(zoomer *Zoomer, input Input)
+RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input, 
+                 int WindowWidth, int WindowHeight)
 {
     if (!Zoomer->IsInitialized)
     {
@@ -91,10 +146,64 @@ RunFractalZoomer(zoomer *Zoomer, input Input)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
         glBindVertexArray(0);
         
+        Zoomer->P = {0.5, 0.0};
+        Zoomer->Scale = 1.0;
+        
         Zoomer->IsInitialized = true;
     }
     
+    f32 AspectRatio = (f32)WindowWidth / (f32)WindowHeight;
+    
+    if (Input.SpaceIsDown)
+    {
+        if (Input.ShiftIsDown)
+        {
+            Zoomer->Scale -= 0.01f;
+        }
+        else
+        {
+            Zoomer->Scale += 0.01f;
+        }
+    }
+    
+    if (!PrevInput.MouseIsDown && Input.MouseIsDown)
+    {
+        Zoomer->IsMoving = true;
+        Zoomer->StartP = NormalizeMouseP(Input.MouseP, AspectRatio);
+    }
+    
+    v2d dP = {};
+    if (Zoomer->IsMoving)
+    {
+        v2d InputP = NormalizeMouseP(Input.MouseP, AspectRatio);
+        dP = (1.0 / pow(2.0, Zoomer->Scale)) * (InputP - Zoomer->StartP);
+        
+        if (!Input.MouseIsDown)
+        {
+            Zoomer->P = Zoomer->P + dP;
+            Zoomer->IsMoving = false;
+        }
+    }
+    
     glUseProgram(Zoomer->Shader);
+    glUniform1f(glGetUniformLocation(Zoomer->Shader, "AspectRatio"),
+                AspectRatio);
+    glUniform1d(glGetUniformLocation(Zoomer->Shader, "ZoomScale"),
+                Zoomer->Scale);
+    
+    if (!Zoomer->IsMoving)
+    {
+        glUniform2d(glGetUniformLocation(Zoomer->Shader, "ZoomP"),
+                    Zoomer->P.X, Zoomer->P.Y);
+    }
+    else
+    {
+        v2d TentativeP = Zoomer->P + dP;
+        glUniform2d(glGetUniformLocation(Zoomer->Shader, "ZoomP"),
+                    TentativeP.X, TentativeP.Y);
+    }
+    
+    glViewport(0, 0, WindowWidth, WindowHeight);
     glBindVertexArray(Zoomer->QuadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
