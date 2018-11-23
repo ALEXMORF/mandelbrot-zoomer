@@ -54,7 +54,7 @@ vec3(0, 0, 0.4)
 
 int color_count = colors.length();
 int real_count = color_count - 1;
-for (int i = 1; i <= real_count; ++i)
+for (int i = 1; i < real_count; ++i)
 {
 if (t <= float(i) / float(real_count))
 {
@@ -62,6 +62,7 @@ return mix(colors[i-1], colors[i], float(real_count) * (t - float(i-1) / float(r
 }
 }
 
+return mix(colors[real_count-1], colors[real_count], float(real_count) * (t - float(real_count-1) / float(real_count)));
 }
 
 void main()
