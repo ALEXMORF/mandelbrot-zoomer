@@ -159,7 +159,7 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input, f32 dT,
         glBindVertexArray(0);
         
         Zoomer->P = {0.5, 0.0};
-        Zoomer->Scale = 1.0;
+        Zoomer->Scale = 0.0;
         Zoomer->IterCount = 200;
         
         Zoomer->IsInitialized = true;

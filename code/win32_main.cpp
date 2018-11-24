@@ -110,6 +110,11 @@ WinMain(HINSTANCE CurrentInstance,
                             gAppIsRunning = false;
                         }
                         
+                        if (KeyIsDown && AltIsDown && KeyCode == VK_RETURN)
+                        {
+                            Win32ToggleFullscreen(Window);
+                        }
+                        
                         if (KeyCode == VK_SHIFT)
                         {
                             gInput.ShiftIsDown = KeyIsDown;
