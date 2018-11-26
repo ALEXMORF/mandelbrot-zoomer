@@ -2,7 +2,7 @@
 
 struct rs
 {
-    GLuint Shader;
+    GLuint MandelbrotShader;
     GLuint QuadVAO;
     
     int CurrentFramebufferIndex;

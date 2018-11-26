@@ -1,4 +1,4 @@
-char *VShaderSource = R"(
+char *QuadVShaderSource = R"(
 #version 400
 
 uniform float AspectRatio;
@@ -14,7 +14,7 @@ gl_Position = vec4(P, 1.0);
 
 )";
 
-char *FShaderSource = R"(
+char *MandelbrotFShaderSource = R"(
 #version 400
 
 uniform dvec2 ZoomP;
@@ -95,28 +95,37 @@ CompileShader(GLenum Type, char *Source)
     return Shader;
 }
 
+internal GLuint 
+MakeShader(char *VShaderSource, char *FShaderSource)
+{
+    GLuint VShader = CompileShader(GL_VERTEX_SHADER, VShaderSource);
+    GLuint FShader = CompileShader(GL_FRAGMENT_SHADER, MandelbrotFShaderSource);
+    
+    GLuint Shader = glCreateProgram();
+    glAttachShader(Shader, VShader);
+    glAttachShader(Shader, FShader);
+    glLinkProgram(Shader);
+    
+    GLint ProgramIsLinked;
+    glGetProgramiv(Shader, GL_LINK_STATUS, &ProgramIsLinked);
+    if (ProgramIsLinked != GL_TRUE)
+    {
+        GLchar ErrorMessage[1024];
+        glGetProgramInfoLog(Shader, sizeof(ErrorMessage), 
+                            0, ErrorMessage);
+        ASSERT(!"Failed to link shader program");
+    }
+    
+    return Shader;
+}
+
 internal rs
 InitRS()
 {
     rs Result = {};
     
-    GLuint VShader = CompileShader(GL_VERTEX_SHADER, VShaderSource);
-    GLuint FShader = CompileShader(GL_FRAGMENT_SHADER, FShaderSource);
-    
-    Result.Shader = glCreateProgram();
-    glAttachShader(Result.Shader, VShader);
-    glAttachShader(Result.Shader, FShader);
-    glLinkProgram(Result.Shader);
-    
-    GLint ProgramIsLinked;
-    glGetProgramiv(Result.Shader, GL_LINK_STATUS, &ProgramIsLinked);
-    if (ProgramIsLinked != GL_TRUE)
-    {
-        GLchar ErrorMessage[1024];
-        glGetProgramInfoLog(Result.Shader, sizeof(ErrorMessage), 
-                            0, ErrorMessage);
-        ASSERT(!"Failed to link shader program");
-    }
+    Result.MandelbrotShader = MakeShader(QuadVShaderSource,
+                                         MandelbrotFShaderSource);
     
     f32 QuadVertices[18] = {
         -1.0f, 1.0f, 0.0f,
@@ -140,43 +149,28 @@ InitRS()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
     glBindVertexArray(0);
     
-    
-    
     return Result;
 }
 
 internal void
-RedrawMandelbrot(zoomer *Zoomer)
+RenderMandelbrot(zoomer *Zoomer)
 {
     rs RS = Zoomer->RS;
     
-    glUseProgram(RS.Shader);
-    glUniform1f(glGetUniformLocation(RS.Shader, "AspectRatio"),
-                (f32)gWindowWidth / (f32)gWindowHeight);
-    glUniform1d(glGetUniformLocation(RS.Shader, "ZoomScale"),
-                Zoomer->Scale);
-    glUniform1i(glGetUniformLocation(RS.Shader, "IterCount"),
-                (i32)Zoomer->IterCount);
-    if (!Zoomer->IsMoving)
+    UseShader(RS.MandelbrotShader);
+    SetUniformFloat("AspectRatio", (f32)gWindowWidth / (f32)gWindowHeight);
+    SetUniformDouble("ZoomScale", Zoomer->Scale);
+    SetUniformInteger("IterCount", (i32)Zoomer->IterCount);
+    
+    v2d ZoomP = Zoomer->P;
+    if (Zoomer->IsMoving)
     {
-        glUniform2d(glGetUniformLocation(RS.Shader, "ZoomP"),
-                    Zoomer->P.X, Zoomer->P.Y);
+        ZoomP = Zoomer->P + Zoomer->dP;
     }
-    else
-    {
-        v2d TentativeP = Zoomer->P + Zoomer->dP;
-        glUniform2d(glGetUniformLocation(RS.Shader, "ZoomP"),
-                    TentativeP.X, TentativeP.Y);
-    }
+    SetUniformDouble2("ZoomP", ZoomP.X, ZoomP.Y);
     
     glViewport(0, 0, gWindowWidth, gWindowHeight);
     glBindVertexArray(RS.QuadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
-}
-
-internal void
-ProgressivelyRenderMandelbrot(zoomer *Zoomer)
-{
-    RedrawMandelbrot(Zoomer);
 }

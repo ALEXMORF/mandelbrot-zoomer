@@ -2,6 +2,7 @@
 
 #include "ch_math.h"
 #include "zoomer_input.h"
+#include "zoomer_opengl.h"
 #include "zoomer_render.h"
 
 struct zoomer

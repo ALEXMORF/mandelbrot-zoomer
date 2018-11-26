@@ -7,6 +7,7 @@ TODO(chen):
 */
 #include "zoomer.h"
 #include "zoomer_input.cpp"
+#include "zoomer_opengl.cpp"
 #include "zoomer_render.cpp"
 
 internal void
@@ -24,13 +25,5 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input, f32 dT)
     }
     
     HandleInput(Zoomer, PrevInput, Input, dT);
-    
-    if (Zoomer->IsUpdated)
-    {
-        RedrawMandelbrot(Zoomer);
-    }
-    else
-    {
-        ProgressivelyRenderMandelbrot(Zoomer);
-    }
+    RenderMandelbrot(Zoomer);
 }
