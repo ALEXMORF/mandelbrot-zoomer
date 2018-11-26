@@ -1,14 +1,12 @@
 char *QuadVShaderSource = R"(
 #version 400
 
-uniform float AspectRatio;
-
 in layout(location = 0) vec3 P;
 out vec2 FragP;
 
 void main()
 {
-FragP = vec2(P.x * AspectRatio, P.y);
+FragP = vec2(P.x, P.y);
 gl_Position = vec4(P, 1.0);
 }
 
@@ -16,6 +14,8 @@ gl_Position = vec4(P, 1.0);
 
 char *MandelbrotFShaderSource = R"(
 #version 400
+
+uniform float AspectRatio;
 
 uniform dvec2 ZoomP;
 uniform double ZoomScale;  
@@ -60,7 +60,7 @@ return mix(colors[real_count-1], colors[real_count], float(real_count) * (t - fl
 void main()
 {
 dvec2 Z = dvec2(0);
-dvec2 C = dvec2(FragP) / pow(2.0, float(ZoomScale)) - ZoomP;
+dvec2 C = dvec2(FragP.x * AspectRatio, FragP.y) / pow(2.0, float(ZoomScale)) - ZoomP;
 
 int Iter;
 for (Iter = 0; Iter < IterCount; ++Iter)
@@ -227,7 +227,6 @@ RenderMandelbrot(zoomer *Zoomer)
     glBindVertexArray(0);
     
     UseShader(RS.BlitShader);
-    SetUniformFloat("AspectRatio", 1.0f);
     glBindTexture(GL_TEXTURE_2D, RS.Framebuffers[0].TexHandle);
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
