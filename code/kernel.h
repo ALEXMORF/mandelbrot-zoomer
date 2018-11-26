@@ -22,3 +22,4 @@ typedef i32 b32;
 #define internal static
 
 #define ASSERT(Value) do {if (!(Value)) *(int *)0 = 0;} while (0)
+#define ARRAY_COUNT(Array) (sizeof(Array)/sizeof((Array)[0]))

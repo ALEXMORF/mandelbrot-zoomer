@@ -76,6 +76,22 @@ FragColor = palette(t);
 
 )";
 
+char *BlitFShaderSource = R"(
+#version 400
+
+uniform sampler2D Tex;
+
+ in vec2 FragP;
+out vec3 FragColor;
+
+void main()
+{
+vec2 TexCoord = 0.5 * FragP + 0.5;
+FragColor = texture(Tex, TexCoord).rgb;
+}
+
+)";
+
 internal GLuint
 CompileShader(GLenum Type, char *Source)
 {
@@ -99,7 +115,7 @@ internal GLuint
 MakeShader(char *VShaderSource, char *FShaderSource)
 {
     GLuint VShader = CompileShader(GL_VERTEX_SHADER, VShaderSource);
-    GLuint FShader = CompileShader(GL_FRAGMENT_SHADER, MandelbrotFShaderSource);
+    GLuint FShader = CompileShader(GL_FRAGMENT_SHADER, FShaderSource);
     
     GLuint Shader = glCreateProgram();
     glAttachShader(Shader, VShader);
@@ -122,10 +138,12 @@ MakeShader(char *VShaderSource, char *FShaderSource)
 internal rs
 InitRS()
 {
-    rs Result = {};
+    rs RS = {};
     
-    Result.MandelbrotShader = MakeShader(QuadVShaderSource,
-                                         MandelbrotFShaderSource);
+    RS.MandelbrotShader = MakeShader(QuadVShaderSource,
+                                     MandelbrotFShaderSource);
+    RS.BlitShader = MakeShader(QuadVShaderSource,
+                               BlitFShaderSource);
     
     f32 QuadVertices[18] = {
         -1.0f, 1.0f, 0.0f,
@@ -142,14 +160,47 @@ InitRS()
     glBufferData(GL_ARRAY_BUFFER, sizeof(QuadVertices), QuadVertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     
-    glGenVertexArrays(1, &Result.QuadVAO);
-    glBindVertexArray(Result.QuadVAO);
+    glGenVertexArrays(1, &RS.QuadVAO);
+    glBindVertexArray(RS.QuadVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
     glBindVertexArray(0);
     
-    return Result;
+    for (int FramebufferIndex = 0; 
+         FramebufferIndex < ARRAY_COUNT(RS.Framebuffers);
+         ++FramebufferIndex)
+    {
+        framebuffer *FBO = RS.Framebuffers + FramebufferIndex;
+        glGenFramebuffers(1, &FBO->Handle);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO->Handle);
+        
+        glGenTextures(1, &FBO->TexHandle);
+        glBindTexture(GL_TEXTURE_2D, FBO->TexHandle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gWindowWidth, gWindowHeight,
+                     0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+                               GL_TEXTURE_2D, FBO->TexHandle, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        
+        glGenRenderbuffers(1, &FBO->RBOHandle);
+        glBindRenderbuffer(GL_RENDERBUFFER, FBO->RBOHandle);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 
+                              gWindowWidth, gWindowHeight);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                                  GL_RENDERBUFFER, FBO->RBOHandle);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        
+        GLenum FramebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        ASSERT(FramebufferStatus == GL_FRAMEBUFFER_COMPLETE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    
+    return RS;
 }
 
 internal void
@@ -169,6 +220,17 @@ RenderMandelbrot(zoomer *Zoomer)
     }
     SetUniformDouble2("ZoomP", ZoomP.X, ZoomP.Y);
     
+    glBindFramebuffer(GL_FRAMEBUFFER, RS.Framebuffers[0].Handle);
+    glViewport(0, 0, gWindowWidth, gWindowHeight);
+    glBindVertexArray(RS.QuadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    
+    UseShader(RS.BlitShader);
+    SetUniformFloat("AspectRatio", 1.0f);
+    glBindTexture(GL_TEXTURE_2D, RS.Framebuffers[0].TexHandle);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, gWindowWidth, gWindowHeight);
     glBindVertexArray(RS.QuadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
