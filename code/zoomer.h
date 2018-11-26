@@ -1,29 +1,23 @@
 #pragma once
-#include "ch_math.h"
 
-struct input
-{
-    b32 ShiftIsDown;
-    b32 SpaceIsDown;
-    b32 UpArrowIsDown;
-    b32 DownArrowIsDown;
-    
-    b32 MouseIsDown;
-    v2 MouseP;
-};
+#include "ch_math.h"
+#include "zoomer_input.h"
+#include "zoomer_render.h"
 
 struct zoomer
 {
-    //logic
     b32 IsMoving;
     v2d StartP;
     v2d P;
+    v2d dP;
     f64 Scale;
     f32 IterCount;
     
-    //render
-    GLuint QuadVAO;
-    GLuint Shader;
+    rs RS;
     
+    b32 IsUpdated;
     b32 IsInitialized;
 };
+
+global_variable int gWindowWidth;
+global_variable int gWindowHeight;

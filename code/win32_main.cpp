@@ -12,8 +12,6 @@
 global_variable input gPrevInput;
 global_variable input gInput;
 global_variable b32 gAppIsRunning;
-global_variable int gWindowWidth;
-global_variable int gWindowHeight;
 
 LRESULT CALLBACK
 Win32WindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
@@ -151,8 +149,7 @@ WinMain(HINSTANCE CurrentInstance,
         f32 dT = Win32GetTimeElapsedInMS(LastTimeCounter, Win32GetPerformanceCounter());
         LastTimeCounter = Win32GetPerformanceCounter();
         f32 dTInSeconds = 0.001f * dT;
-        RunFractalZoomer(&Zoomer, gPrevInput, gInput, dTInSeconds,
-                         gWindowWidth, gWindowHeight);
+        RunFractalZoomer(&Zoomer, gPrevInput, gInput, dTInSeconds);
         
         char WindowTitleBuffer[1024];
         snprintf(WindowTitleBuffer, sizeof(WindowTitleBuffer), 
