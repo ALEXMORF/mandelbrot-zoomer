@@ -13,6 +13,7 @@ struct rs
     GLuint BlitShader;
     GLuint QuadVAO;
     
-    int CurrentFramebufferIndex;
+    int FrameIndex;
+    int CurrentFBOIndex;
     framebuffer Framebuffers[2];
 };

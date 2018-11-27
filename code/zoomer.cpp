@@ -25,6 +25,7 @@ RunFractalZoomer(zoomer *Zoomer, input PrevInput, input Input, f32 dT)
         Zoomer->IsInitialized = true;
     }
     
+    Zoomer->Time += dT;
     HandleInput(Zoomer, PrevInput, Input, dT);
     RenderMandelbrot(Zoomer);
 }

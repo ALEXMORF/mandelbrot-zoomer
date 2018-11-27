@@ -15,14 +15,32 @@ gl_Position = vec4(P, 1.0);
 char *MandelbrotFShaderSource = R"(
 #version 400
 
-uniform float AspectRatio;
+uniform float uAspectRatio;
+uniform float uTime;
 
-uniform dvec2 ZoomP;
-uniform double ZoomScale;  
-uniform int IterCount;
+uniform dvec2 uZoomP;
+uniform double uZoomScale;  
+uniform int uIterCount;
+
+//NOTE(chen): for blending progressively rendered results
+uniform float uPrevWeight;
+uniform sampler2D uPrevFrame;
 
 in vec2 FragP;
 out vec3 FragColor;
+
+ float Hash(in vec2 P)
+{
+return fract(34135.13*sin(dot(P, vec2(83.13, 951.31))));
+}
+
+vec2 Jitter(in vec2 Seed)
+{
+vec2 Res;
+Res.x = Hash(275.14*Seed + 8.13*uTime);
+Res.y = Hash(975.14*Seed + 71.49*uTime);
+return 2.0 * Res - 1.0;
+}
 
 dvec2 ComplexSq(in dvec2 p)
 {
@@ -59,19 +77,25 @@ return mix(colors[real_count-1], colors[real_count], float(real_count) * (t - fl
 
 void main()
 {
+vec2 UV = FragP + 0.5 * Jitter(FragP) * (vec2(1.0) / textureSize(uPrevFrame, 0));
+
 dvec2 Z = dvec2(0);
-dvec2 C = dvec2(FragP.x * AspectRatio, FragP.y) / pow(2.0, float(ZoomScale)) - ZoomP;
+dvec2 C = dvec2(UV.x * uAspectRatio, UV.y) / pow(2.0, float(uZoomScale)) - uZoomP;
 
 int Iter;
-for (Iter = 0; Iter < IterCount; ++Iter)
+for (Iter = 0; Iter < uIterCount; ++Iter)
 {
 Z = ComplexSq(Z) + C;
 if (dot(Z, Z) > 4.0) break;
 }
 
- float t = float(Iter) / float(IterCount);
- 
-FragColor = palette(t);
+ float t = float(Iter) / float(uIterCount);
+  vec3 Color = palette(t);
+  
+vec2 TexCoord = 0.5 * FragP + 0.5;
+vec3 PrevFragColor = texture(uPrevFrame, TexCoord).rgb;
+
+FragColor = uPrevWeight * PrevFragColor + (1.0 - uPrevWeight) * Color;
 }
 
 )";
@@ -79,7 +103,7 @@ FragColor = palette(t);
 char *BlitFShaderSource = R"(
 #version 400
 
-uniform sampler2D Tex;
+uniform sampler2D uTex;
 
  in vec2 FragP;
 out vec3 FragColor;
@@ -87,10 +111,11 @@ out vec3 FragColor;
 void main()
 {
 vec2 TexCoord = 0.5 * FragP + 0.5;
-FragColor = texture(Tex, TexCoord).rgb;
+FragColor = texture(uTex, TexCoord).rgb;
 }
 
 )";
+
 
 internal GLuint
 CompileShader(GLenum Type, char *Source)
@@ -206,32 +231,45 @@ InitRS()
 internal void
 RenderMandelbrot(zoomer *Zoomer)
 {
-    rs RS = Zoomer->RS;
+    rs *RS = &Zoomer->RS;
+    if (Zoomer->IsUpdated)
+    {
+        RS->FrameIndex = 0;
+    }
     
-    UseShader(RS.MandelbrotShader);
-    SetUniformFloat("AspectRatio", (f32)gWindowWidth / (f32)gWindowHeight);
-    SetUniformDouble("ZoomScale", Zoomer->Scale);
-    SetUniformInteger("IterCount", (i32)Zoomer->IterCount);
-    
+    UseShader(RS->MandelbrotShader);
+    SetUniformFloat("uAspectRatio", (f32)gWindowWidth / (f32)gWindowHeight);
+    SetUniformFloat("uTime", Zoomer->Time);
+    SetUniformDouble("uZoomScale", Zoomer->Scale);
+    SetUniformInteger("uIterCount", (i32)Zoomer->IterCount);
     v2d ZoomP = Zoomer->P;
     if (Zoomer->IsMoving)
     {
         ZoomP = Zoomer->P + Zoomer->dP;
     }
-    SetUniformDouble2("ZoomP", ZoomP.X, ZoomP.Y);
+    SetUniformDouble2("uZoomP", ZoomP.X, ZoomP.Y);
     
-    glBindFramebuffer(GL_FRAMEBUFFER, RS.Framebuffers[0].Handle);
+    int FrameCount = RS->FrameIndex + 1;
+    SetUniformFloat("uPrevWeight", (f32)RS->FrameIndex / (f32)FrameCount);
+    
+    int LastFBOIndex = RS->CurrentFBOIndex;
+    RS->CurrentFBOIndex = (RS->CurrentFBOIndex + 1) % ARRAY_COUNT(RS->Framebuffers);
+    
+    glBindTexture(GL_TEXTURE_2D, RS->Framebuffers[LastFBOIndex].TexHandle);
+    glBindFramebuffer(GL_FRAMEBUFFER, RS->Framebuffers[RS->CurrentFBOIndex].Handle);
     glViewport(0, 0, gWindowWidth, gWindowHeight);
-    glBindVertexArray(RS.QuadVAO);
+    glBindVertexArray(RS->QuadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
     
-    UseShader(RS.BlitShader);
-    glBindTexture(GL_TEXTURE_2D, RS.Framebuffers[0].TexHandle);
+    UseShader(RS->BlitShader);
+    glBindTexture(GL_TEXTURE_2D, RS->Framebuffers[RS->CurrentFBOIndex].TexHandle);
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, gWindowWidth, gWindowHeight);
-    glBindVertexArray(RS.QuadVAO);
+    glBindVertexArray(RS->QuadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
+    
+    RS->FrameIndex += 1;
 }

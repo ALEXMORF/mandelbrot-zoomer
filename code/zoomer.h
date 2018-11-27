@@ -16,6 +16,7 @@ struct zoomer
     
     rs RS;
     
+    f32 Time;
     b32 IsUpdated;
     b32 IsInitialized;
 };
