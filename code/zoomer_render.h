@@ -5,6 +5,9 @@ struct framebuffer
     GLuint Handle;
     GLuint TexHandle;
     GLuint RBOHandle;
+    
+    int Width;
+    int Height;
 };
 
 struct rs

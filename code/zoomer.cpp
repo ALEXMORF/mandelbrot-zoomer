@@ -1,9 +1,7 @@
 /*
 TODO(chen):
 
-1. progressive rendering on fixed size
-2. handle resizing
- 3. port to linux
+ 1. port to linux
  
 */
 #include "zoomer.h"

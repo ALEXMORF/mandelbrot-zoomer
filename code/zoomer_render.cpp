@@ -160,6 +160,44 @@ MakeShader(char *VShaderSource, char *FShaderSource)
     return Shader;
 }
 
+internal framebuffer
+MakeFramebuffer(int Width, int Height)
+{
+    framebuffer FBO = {};
+    
+    FBO.Width = gWindowWidth;
+    FBO.Height = gWindowHeight;
+    
+    glGenFramebuffers(1, &FBO.Handle);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO.Handle);
+    
+    glGenTextures(1, &FBO.TexHandle);
+    glBindTexture(GL_TEXTURE_2D, FBO.TexHandle);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gWindowWidth, gWindowHeight,
+                 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+                           GL_TEXTURE_2D, FBO.TexHandle, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    glGenRenderbuffers(1, &FBO.RBOHandle);
+    glBindRenderbuffer(GL_RENDERBUFFER, FBO.RBOHandle);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 
+                          gWindowWidth, gWindowHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                              GL_RENDERBUFFER, FBO.RBOHandle);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    
+    GLenum FramebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    ASSERT(FramebufferStatus == GL_FRAMEBUFFER_COMPLETE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    return FBO;
+}
+
 internal rs
 InitRS()
 {
@@ -196,33 +234,7 @@ InitRS()
          FramebufferIndex < ARRAY_COUNT(RS.Framebuffers);
          ++FramebufferIndex)
     {
-        framebuffer *FBO = RS.Framebuffers + FramebufferIndex;
-        glGenFramebuffers(1, &FBO->Handle);
-        glBindFramebuffer(GL_FRAMEBUFFER, FBO->Handle);
-        
-        glGenTextures(1, &FBO->TexHandle);
-        glBindTexture(GL_TEXTURE_2D, FBO->TexHandle);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gWindowWidth, gWindowHeight,
-                     0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
-                               GL_TEXTURE_2D, FBO->TexHandle, 0);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        
-        glGenRenderbuffers(1, &FBO->RBOHandle);
-        glBindRenderbuffer(GL_RENDERBUFFER, FBO->RBOHandle);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 
-                              gWindowWidth, gWindowHeight);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                                  GL_RENDERBUFFER, FBO->RBOHandle);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-        
-        GLenum FramebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        ASSERT(FramebufferStatus == GL_FRAMEBUFFER_COMPLETE);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        RS.Framebuffers[FramebufferIndex] = MakeFramebuffer(gWindowWidth, gWindowHeight);
     }
     
     return RS;
@@ -232,6 +244,23 @@ internal void
 RenderMandelbrot(zoomer *Zoomer)
 {
     rs *RS = &Zoomer->RS;
+    
+    for (int FramebufferIndex = 0; 
+         FramebufferIndex < ARRAY_COUNT(RS->Framebuffers);
+         ++FramebufferIndex)
+    {
+        framebuffer *FBO = RS->Framebuffers + FramebufferIndex;
+        if (FBO->Width != gWindowWidth || FBO->Height != gWindowHeight)
+        {
+            glDeleteTextures(1, &FBO->TexHandle);
+            glDeleteRenderbuffers(1, &FBO->RBOHandle);
+            glDeleteFramebuffers(1, &FBO->Handle);
+            
+            *FBO = MakeFramebuffer(gWindowWidth, gWindowHeight);
+            Zoomer->IsUpdated = true;
+        }
+    }
+    
     if (Zoomer->IsUpdated)
     {
         RS->FrameIndex = 0;
