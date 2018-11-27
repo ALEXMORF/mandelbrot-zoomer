@@ -1,11 +1,11 @@
-#include <windows.h>
-#include <windowsx.h>
-#include <stdio.h>
 #include "ch_gl.h"
-
+#undef APIENTRY
 #include "kernel.h"
 #include "zoomer.cpp"
 
+#include <windows.h>
+#include <windowsx.h>
+#include <ShellScalingAPI.h>
 #include "win32_kernel.h"
 
 //TODO(chen): double-buffered input state
@@ -67,14 +67,18 @@ WinMain(HINSTANCE CurrentInstance,
         LPSTR Commandline,
         int ShowCode)
 {
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    
     gWindowWidth = 1080;
     gWindowHeight = 724;
     HWND Window = Win32CreateWindow(CurrentInstance, 
                                     gWindowWidth, gWindowHeight,
                                     "Fractal-Zoom", "Fractal-Zoom windowclass",
                                     Win32WindowCallback);
+    ASSERT(Window);
     HDC WindowDC = GetDC(Window);
-    Win32InitializeOpengl(WindowDC, 4, 0);
+    b32 InitializedOpenGL = Win32InitializeOpengl(WindowDC, 4, 0);
+    ASSERT(InitializedOpenGL);
     wglSwapInterval(1);
     LoadGLFunctions(Win32GetOpenglFunction);
     

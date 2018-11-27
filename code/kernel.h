@@ -21,5 +21,11 @@ typedef i32 b32;
 #define local_persist static
 #define internal static
 
+#if 1
+#include <assert.h>
+#define ASSERT(Value) assert(Value)
+#else
 #define ASSERT(Value) do {if (!(Value)) *(int *)0 = 0;} while (0)
+#endif
+
 #define ARRAY_COUNT(Array) (sizeof(Array)/sizeof((Array)[0]))
